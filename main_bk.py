@@ -1,6 +1,7 @@
 import random
 from telethon import TelegramClient, events
-from telethon.sync import TelegramClient as TelegramClientSync
+from telethon.sync import TelegramClient as TelegramClientSync, utils
+from os import path
 # telethon '1.24.0'
 
 print("Add account chinh vao group can clone message \n")
@@ -19,16 +20,51 @@ client = TelegramClient("anon", 19937677, "9712470f8b286de877e864b24917d87a")
 
 usersClients = []
 
-f = open("accounts.txt", "r")
-for idx, account in enumerate(f):
-    user_data = account.split(" ")
-    print("Connect account " + user_data[0] + "\n")
-    clientX = TelegramClientSync(str(user_data[0]), user_data[1], user_data[2])
-    clientX.connect()
-    clientX.start()
 
-    print("Connected account " +
-          user_data[0] + " " + str(clientX.is_connected()) + "\n")
+async def signin(phone, force_login=True):
+    """
+    Login and returns client object. If `force_login` is `False` then returns None if session is not connected.
+    """
+
+    _phone = utils.parse_phone(phone)
+    if not phone:
+        return
+
+    client = TelegramClient(
+        path.join("sessions", f"{_phone}.session"),
+        19937677, "9712470f8b286de877e864b24917d87a"
+    )
+
+    try:
+        await client.connect()
+
+        if not await client.is_user_authorized():
+            if force_login:
+                caption = f"Account {_phone}"
+                await client.start(
+                    _phone,
+                    password=lambda: gui_utils.get_input(
+                        "Nhập password 2FA", caption),
+                    code_callback=lambda: gui_utils.get_input(
+                        "Nhập code", caption)
+                )
+            else:
+                return
+
+        return client
+
+    except:
+        return
+
+
+f = open("accounts.txt", "r")
+for account in f:
+
+    print("Connect account " + account + "\n")
+    clientX = signin(account)
+
+    # print("Connected account " +
+    #       account + " " + str(clientX.is_connected()) + "\n")
     usersClients.append(clientX)
 
 preUserSentId = 0
